@@ -1,0 +1,73 @@
+# ==============================================================================
+# BrandShield AI — Production .gitignore
+# ==============================================================================
+
+# Local Environment Variables & Secrets (CRITICAL — NEVER COMMIT)
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# Dependencies & Virtual Environments
+node_modules/
+venv/
+.venv/
+env/
+backend/venv/
+frontend/node_modules/
+
+# Python byte-compiled & cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing & Coverage outputs
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Build & Bundler outputs
+dist/
+build/
+.vite/
+*.egg-info/
+frontend/dist/
+
+# Antigravity Prompt packs, corrected prompts & IDE agent artifacts
+BrandShield_AI_All_Prompts_CORRECTED.md
+*.prompts*
+*.prompt*
+.agents/
+.gemini/
+brain/
+
+# Standalone synthetic dataset generation packages & archive files
+novapay_synthetic_dataset/
+*.zip
+*.tar.gz
+*.tgz
+*.gz
+
+# Logs, test videos, screenshots & local debugging artifacts
+*.log
+logs/
+.system_generated/
+.tempmediaStorage/
+.user_uploaded/
+scratch/
+*.webp
+
+# OS / System / Editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*~
