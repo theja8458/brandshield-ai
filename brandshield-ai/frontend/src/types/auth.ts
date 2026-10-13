@@ -3,6 +3,7 @@ export type UserRole = 'admin' | 'analyst';
 export interface User {
   user_id: string;
   email: string;
+  full_name?: string | null;
   role: UserRole;
   is_active: boolean;
   created_at: string;
@@ -22,5 +23,6 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (fullName: string, email: string, password: string, confirmPassword?: string) => Promise<void>;
   logout: () => Promise<void>;
 }

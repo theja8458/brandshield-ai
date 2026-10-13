@@ -311,3 +311,190 @@ def test_logout_endpoint():
     )
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
+
+
+def test_successful_registration():
+    """Verify that a new user can register publicly and receive an analyst token."""
+    res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Jane Analyst",
+            "email": "jane.analyst@brandshield.ai",
+            "password": "SecurePassword123!",
+            "confirm_password": "SecurePassword123!",
+        },
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert "access_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["user"]["email"] == "jane.analyst@brandshield.ai"
+    assert data["user"]["full_name"] == "Jane Analyst"
+    assert data["user"]["role"] == "analyst"
+
+
+def test_registration_duplicate_email():
+    """Verify that registering an already existing email returns 409 Conflict."""
+    payload = {
+        "full_name": "First User",
+        "email": "duplicate.reg@brandshield.ai",
+        "password": "SecurePassword123!",
+        "confirm_password": "SecurePassword123!",
+    }
+    res1 = client.post("/api/v1/auth/register", json=payload)
+    assert res1.status_code == 201
+
+    res2 = client.post("/api/v1/auth/register", json=payload)
+    assert res2.status_code == 409
+    assert "already exists" in res2.json()["detail"].lower()
+
+
+def test_registration_invalid_email_and_weak_password():
+    """Verify registration rejects invalid emails and weak passwords."""
+    # Invalid email
+    res_bad_email = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Test User",
+            "email": "not-an-email",
+            "password": "SecurePassword123!",
+            "confirm_password": "SecurePassword123!",
+        },
+    )
+    assert res_bad_email.status_code == 422
+
+    # Weak password (< 8 chars)
+    res_weak_pass = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Test User",
+            "email": "valid.user@brandshield.ai",
+            "password": "short",
+            "confirm_password": "short",
+        },
+    )
+    assert res_weak_pass.status_code == 422
+
+
+def test_registration_password_confirmation_mismatch():
+    """Verify registration rejects mismatched password confirmation."""
+    res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Test User",
+            "email": "mismatch@brandshield.ai",
+            "password": "SecurePassword123!",
+            "confirm_password": "DifferentPassword123!",
+        },
+    )
+    assert res.status_code == 422
+    assert "passwords do not match" in res.text.lower()
+
+
+def test_registration_attempted_admin_role_injection():
+    """
+    CRITICAL SECURITY TEST:
+    Verify that an attacker attempting to pass role='admin' in public registration
+    is completely blocked from escalating privilege and is assigned 'analyst' only.
+    """
+    res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Sneaky Attacker",
+            "email": "attacker@brandshield.ai",
+            "password": "MaliciousPassword123!",
+            "confirm_password": "MaliciousPassword123!",
+            "role": "admin",
+        },
+    )
+    assert res.status_code == 201
+    data = res.json()
+    assert data["user"]["role"] == "analyst"
+
+    # Verify directly in MongoDB Atlas collection
+    doc = get_user_by_email("attacker@brandshield.ai")
+    assert doc is not None
+    assert doc["role"] == "analyst"
+
+
+def test_successful_login_after_registration():
+    """Verify that a registered user can log in via /api/v1/auth/login."""
+    # 1. Register
+    reg_res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Returning User",
+            "email": "returning@brandshield.ai",
+            "password": "LoginPassword123!",
+            "confirm_password": "LoginPassword123!",
+        },
+    )
+    assert reg_res.status_code == 201
+
+    # 2. Login
+    login_res = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "returning@brandshield.ai",
+            "password": "LoginPassword123!",
+        },
+    )
+    assert login_res.status_code == 200
+    login_data = login_res.json()
+    assert "access_token" in login_data
+    assert login_data["user"]["email"] == "returning@brandshield.ai"
+    assert login_data["user"]["role"] == "analyst"
+
+
+def test_newly_registered_analyst_denied_admin_endpoints():
+    """Verify that newly registered users are denied access to admin-only endpoints."""
+    reg_res = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Standard Analyst",
+            "email": "standard.analyst@brandshield.ai",
+            "password": "SecurePassword123!",
+            "confirm_password": "SecurePassword123!",
+        },
+    )
+    assert reg_res.status_code == 201
+    token = reg_res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # Attempt admin endpoint: GET /api/v1/auth/users
+    res_list = client.get("/api/v1/auth/users", headers=headers)
+    assert res_list.status_code == 403
+
+    # Attempt admin endpoint: POST /api/v1/auth/users
+    res_create = client.post(
+        "/api/v1/auth/users",
+        headers=headers,
+        json={"email": "victim@brandshield.ai", "password": "Password123!", "role": "analyst"},
+    )
+    assert res_create.status_code == 403
+
+
+def test_existing_admin_login_still_works():
+    """Verify that existing administrator accounts can still log in and perform admin actions."""
+    admin_in = UserCreate(
+        full_name="Master Administrator",
+        email="superadmin@brandshield.ai",
+        password="SuperAdminPassword123!",
+        role=UserRole.ADMIN,
+    )
+    create_user(admin_in)
+
+    res = client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "superadmin@brandshield.ai",
+            "password": "SuperAdminPassword123!",
+        },
+    )
+    assert res.status_code == 200
+    admin_token = res.json()["access_token"]
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    # Verify admin can access admin users list
+    res_users = client.get("/api/v1/auth/users", headers=headers)
+    assert res_users.status_code == 200

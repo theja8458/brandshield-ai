@@ -6,12 +6,14 @@ from app.crud.user import (
     create_user,
     get_user_by_email,
     list_users,
+    register_user,
     update_last_login,
     user_doc_to_response,
 )
 from app.schemas.auth import (
     LoginRequest,
     MessageResponse,
+    RegisterRequest,
     TokenResponse,
     UserCreate,
     UserResponse,
@@ -23,6 +25,28 @@ from app.services.auth import (
 )
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
+
+
+@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def api_register(req: RegisterRequest):
+    """
+    Public registration endpoint for new BrandShield AI users.
+    Assigns the 'analyst' role exclusively (role cannot be escalated publicly).
+    Returns JWT access token and user profile for immediate authenticated session.
+    """
+    try:
+        user_resp, token, expires_in = register_user(req)
+        return TokenResponse(
+            access_token=token,
+            token_type="bearer",
+            expires_in=expires_in,
+            user=user_resp,
+        )
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(err),
+        )
 
 
 @router.post("/login", response_model=TokenResponse)

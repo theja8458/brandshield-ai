@@ -2,7 +2,7 @@ import re
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 EMAIL_REGEX = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
 
@@ -14,6 +14,7 @@ class UserRole(str, Enum):
 
 class UserBase(BaseModel):
     email: str = Field(..., min_length=5, max_length=255, description="Normalized email address")
+    full_name: Optional[str] = Field(default=None, max_length=100, description="Full name of user")
     role: UserRole = Field(default=UserRole.ANALYST, description="Role: admin or analyst")
 
     @field_validator("email")
@@ -34,6 +35,42 @@ class UserCreate(UserBase):
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters long.")
         return v
+
+
+class RegisterRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=100, description="Full name")
+    email: str = Field(..., min_length=5, max_length=255, description="Work email address")
+    password: str = Field(..., min_length=8, max_length=128, description="Password (min 8 characters)")
+    confirm_password: Optional[str] = Field(default=None, description="Password confirmation")
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_full_name(cls, v: str) -> str:
+        cleaned = v.strip()
+        if len(cleaned) < 2:
+            raise ValueError("Full name must be at least 2 characters long.")
+        return cleaned
+
+    @field_validator("email")
+    @classmethod
+    def validate_and_normalize_email(cls, v: str) -> str:
+        cleaned = v.strip().lower()
+        if not EMAIL_REGEX.match(cleaned):
+            raise ValueError("Invalid email address format.")
+        return cleaned
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long.")
+        return v
+
+    @model_validator(mode="after")
+    def validate_passwords_match(self) -> "RegisterRequest":
+        if self.confirm_password is not None and self.password != self.confirm_password:
+            raise ValueError("Passwords do not match.")
+        return self
 
 
 class UserResponse(UserBase):

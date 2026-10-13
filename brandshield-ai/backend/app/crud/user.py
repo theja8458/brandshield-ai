@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Optional
 from pymongo.collection import Collection
 
 from app.database import get_database
-from app.schemas.auth import UserCreate, UserResponse, UserRole
-from app.services.auth import hash_password
+from app.schemas.auth import RegisterRequest, UserCreate, UserResponse, UserRole
+from app.services.auth import create_access_token, hash_password
 
 logger = logging.getLogger("brandshield.crud.user")
 
@@ -28,6 +28,7 @@ def user_doc_to_response(doc: Dict[str, Any]) -> UserResponse:
     return UserResponse(
         user_id=doc["user_id"],
         email=doc["email"],
+        full_name=doc.get("full_name"),
         role=UserRole(doc.get("role", UserRole.ANALYST.value)),
         is_active=doc.get("is_active", True),
         created_at=doc.get("created_at", datetime.now(timezone.utc)),
@@ -64,6 +65,7 @@ def create_user(user_in: UserCreate, is_active: bool = True) -> UserResponse:
     user_doc = {
         "user_id": user_id,
         "email": normalized_email,
+        "full_name": getattr(user_in, "full_name", None),
         "hashed_password": hashed,
         "role": user_in.role.value,
         "is_active": is_active,
@@ -75,6 +77,46 @@ def create_user(user_in: UserCreate, is_active: bool = True) -> UserResponse:
     col.insert_one(user_doc)
     logger.info("Created user %s with role %s", user_id, user_in.role.value)
     return user_doc_to_response(user_doc)
+
+
+def register_user(req: RegisterRequest) -> tuple[UserResponse, str, int]:
+    """
+    Register a new user from public registration.
+    SECURITY GUARANTEE: Role is strictly locked to 'analyst' on the server.
+    Returns (UserResponse, access_token, expires_in_seconds).
+    """
+    col = get_users_collection()
+    normalized_email = req.email.strip().lower()
+
+    if col.find_one({"email": normalized_email}):
+        raise ValueError(f"An account with email '{normalized_email}' already exists.")
+
+    user_id = f"usr-{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    hashed = hash_password(req.password)
+
+    user_doc = {
+        "user_id": user_id,
+        "email": normalized_email,
+        "full_name": req.full_name.strip(),
+        "hashed_password": hashed,
+        "role": UserRole.ANALYST.value,  # Server-enforced: cannot be escalated
+        "is_active": True,
+        "created_at": now,
+        "updated_at": now,
+        "last_login": now,
+    }
+
+    col.insert_one(user_doc)
+    logger.info("Registered new analyst user %s (%s)", user_id, normalized_email)
+
+    token, expires_in = create_access_token({
+        "sub": user_id,
+        "email": normalized_email,
+        "role": UserRole.ANALYST.value,
+    })
+
+    return user_doc_to_response(user_doc), token, expires_in
 
 
 def list_users() -> List[UserResponse]:

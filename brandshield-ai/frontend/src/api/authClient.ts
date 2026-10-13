@@ -11,6 +11,21 @@ export async function loginUser(email: string, password: string): Promise<LoginR
   return data;
 }
 
+export async function registerUser(payload: {
+  full_name: string;
+  email: string;
+  password: string;
+  confirm_password?: string;
+}): Promise<LoginResponse> {
+  const data = await apiFetch<LoginResponse>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  setStoredToken(data.access_token);
+  setStoredUser(data.user);
+  return data;
+}
+
 export async function fetchCurrentUser(): Promise<User> {
   const user = await apiFetch<User>('/api/v1/auth/me');
   setStoredUser(user);
@@ -32,6 +47,7 @@ export async function createAnalystUser(userIn: {
   email: string;
   password: string;
   role: 'admin' | 'analyst';
+  full_name?: string;
 }): Promise<User> {
   return apiFetch<User>('/api/v1/auth/users', {
     method: 'POST',

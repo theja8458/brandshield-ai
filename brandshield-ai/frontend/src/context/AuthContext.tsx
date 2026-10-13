@@ -4,6 +4,7 @@ import {
   fetchCurrentUser,
   loginUser,
   logoutUser,
+  registerUser,
 } from '../api/authClient';
 import {
   getStoredToken,
@@ -73,6 +74,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(res.user);
   };
 
+  const register = async (
+    fullName: string,
+    email: string,
+    pass: string,
+    confirmPass?: string
+  ): Promise<void> => {
+    const res = await registerUser({
+      full_name: fullName,
+      email,
+      password: pass,
+      confirm_password: confirmPass,
+    });
+    setToken(res.access_token);
+    setUser(res.user);
+  };
+
   const logout = async (): Promise<void> => {
     await logoutUser();
     setToken(null);
@@ -87,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: Boolean(token && user),
         isLoading,
         login,
+        register,
         logout,
       }}
     >

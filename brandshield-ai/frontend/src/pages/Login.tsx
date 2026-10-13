@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate, Navigate, Link } from 'react-router-dom';
 import {
   Shield,
   Lock,
@@ -175,6 +175,19 @@ export const Login: React.FC = () => {
               )}
             </button>
           </form>
+
+          {/* Link to Sign Up */}
+          <div className="mt-5 text-center">
+            <p className="text-xs text-slate-400">
+              New to BrandShield AI?{' '}
+              <Link
+                to="/signup"
+                className="font-medium text-indigo-400 hover:text-indigo-300 underline underline-offset-4 transition-colors"
+              >
+                Create an account
+              </Link>
+            </p>
+          </div>
 
           {/* Security details footnote */}
           <div className="mt-6 pt-5 border-t border-slate-800/80 text-center">
