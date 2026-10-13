@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Response, status
+from fastapi import Depends, FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -21,6 +21,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from app.api.auth import router as auth_router
+from app.api.deps import get_current_user
 from app.api.brands import router as brands_router
 from app.api.detection import router as detection_router
 from app.api.sources import router as sources_router
@@ -39,14 +41,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(brands_router)
-app.include_router(detection_router)
-app.include_router(sources_router)
-app.include_router(social_router)
-app.include_router(apps_router)
-app.include_router(dashboard_router)
-app.include_router(investigations_router)
-app.include_router(campaigns_router)
+# Authentication router (includes public /login, protected /me & /logout, and admin /users)
+app.include_router(auth_router)
+
+# Protected operational routers: require authenticated active user
+app.include_router(brands_router, dependencies=[Depends(get_current_user)])
+app.include_router(detection_router, dependencies=[Depends(get_current_user)])
+app.include_router(sources_router, dependencies=[Depends(get_current_user)])
+app.include_router(social_router, dependencies=[Depends(get_current_user)])
+app.include_router(apps_router, dependencies=[Depends(get_current_user)])
+app.include_router(dashboard_router, dependencies=[Depends(get_current_user)])
+app.include_router(investigations_router, dependencies=[Depends(get_current_user)])
+app.include_router(campaigns_router, dependencies=[Depends(get_current_user)])
 
 
 @app.get("/health", tags=["System"])

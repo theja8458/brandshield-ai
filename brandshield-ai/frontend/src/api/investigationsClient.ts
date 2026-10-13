@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { apiFetch } from './apiClient';
 import { Candidate, CandidateListResponse } from './socialClient';
 
 export interface InvestigationHistoryEntry {
@@ -72,21 +72,11 @@ export async function fetchInvestigationCandidates(
   if (params.page) query.set('page', params.page.toString());
   if (params.limit) query.set('limit', params.limit.toString());
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/investigations/candidates?${query.toString()}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to fetch candidates (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<CandidateListResponse>(`/api/v1/investigations/candidates?${query.toString()}`);
 }
 
 export async function fetchCandidateEvidence(candidateId: string): Promise<EvidenceDetail> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/evidence/${candidateId}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to fetch evidence for ${candidateId} (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<EvidenceDetail>(`/api/v1/evidence/${candidateId}`);
 }
 
 export async function updateCandidateStatus(
@@ -94,14 +84,8 @@ export async function updateCandidateStatus(
   status: 'new' | 'investigating' | 'resolved' | 'false_positive',
   notes?: string
 ): Promise<Candidate> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/investigations/candidates/${candidateId}/status`, {
+  return apiFetch<Candidate>(`/api/v1/investigations/candidates/${candidateId}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status, notes: notes || '' }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to update investigation status (${res.status})`);
-  }
-  return res.json();
 }

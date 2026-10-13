@@ -1,6 +1,19 @@
+from datetime import datetime, timezone
 import pytest
 from app.config import settings
 from app.database import get_database, ping_database
+from app.main import app
+from app.api.deps import get_current_user
+from app.schemas.auth import UserResponse, UserRole
+
+
+DEFAULT_TEST_USER = UserResponse(
+    user_id="usr-test-admin-001",
+    email="testadmin@brandshield.ai",
+    role=UserRole.ADMIN,
+    is_active=True,
+    created_at=datetime.now(timezone.utc),
+)
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -35,7 +48,25 @@ def point_to_test_database(monkeypatch):
         # Clear collections in test database before each test
         db["brands"].delete_many({})
         db["candidates"].delete_many({})
+        db["users"].delete_many({})
     yield
+
+
+@pytest.fixture(autouse=True)
+def default_auth_override_for_non_auth_tests(request):
+    """
+    For existing business-logic test suites (brands, monitoring, campaigns),
+    provide an authenticated user by default so they continue testing domain logic.
+    For test_auth.py, do not override so that real JWT credentials, 401s, and 403s are tested.
+    """
+    if "test_auth" in request.node.nodeid:
+        app.dependency_overrides.pop(get_current_user, None)
+        yield
+        app.dependency_overrides.pop(get_current_user, None)
+    else:
+        app.dependency_overrides[get_current_user] = lambda: DEFAULT_TEST_USER
+        yield
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture

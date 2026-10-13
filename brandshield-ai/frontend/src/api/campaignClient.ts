@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { apiFetch } from './apiClient';
 
 export interface GraphNode {
   id: string; // candidate_id
@@ -67,24 +67,14 @@ export async function fetchCampaignGraph(
   if (brandId) query.set('brand_id', brandId);
   if (includeOfficial) query.set('include_official', 'true');
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/campaigns/graph?${query.toString()}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to fetch campaign graph (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<CampaignGraphResponse>(`/api/v1/campaigns/graph?${query.toString()}`);
 }
 
 export async function fetchCampaignGroups(brandId?: string): Promise<CampaignGroup[]> {
   const query = new URLSearchParams();
   if (brandId) query.set('brand_id', brandId);
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/campaigns/groups?${query.toString()}`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to fetch campaign groups (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<CampaignGroup[]>(`/api/v1/campaigns/groups?${query.toString()}`);
 }
 
 export async function seedNovaPayCampaigns(): Promise<{
@@ -94,13 +84,7 @@ export async function seedNovaPayCampaigns(): Promise<{
   total_edges: number;
   message: string;
 }> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/campaigns/seed/novapay`, {
+  return apiFetch('/api/v1/campaigns/seed/novapay', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to seed NovaPay campaign data (${res.status})`);
-  }
-  return res.json();
 }

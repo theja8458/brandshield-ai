@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { apiFetch } from './apiClient';
 
 export interface ConnectorStatus {
   connector_id: string;
@@ -31,22 +31,13 @@ export interface BrandScanResponse {
 }
 
 export async function fetchSources(): Promise<ConnectorStatus[]> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/sources`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch connector statuses (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<ConnectorStatus[]>('/api/v1/sources');
 }
 
 export async function testSourceConnection(connectorId: string): Promise<ConnectorStatus> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/sources/${connectorId}/test`, {
+  return apiFetch<ConnectorStatus>(`/api/v1/sources/${connectorId}/test`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to test connector (${res.status})`);
-  }
-  return res.json();
 }
 
 export async function runBrandScan(
@@ -54,12 +45,7 @@ export async function runBrandScan(
   sources?: string[]
 ): Promise<BrandScanResponse> {
   const queryParam = sources && sources.length > 0 ? `?sources=${sources.join(',')}` : '';
-  const res = await fetch(`${API_BASE_URL}/api/v1/brands/${brandId}/scan${queryParam}`, {
+  return apiFetch<BrandScanResponse>(`/api/v1/brands/${brandId}/scan${queryParam}`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Scan failed (${res.status})`);
-  }
-  return res.json();
 }

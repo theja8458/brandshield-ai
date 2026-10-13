@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { apiFetch } from './apiClient';
 
 export interface DetectionSignal {
   id: string;
@@ -59,11 +59,11 @@ export interface CandidateListResponse {
   items: Candidate[];
   total: number;
   page: number;
-  limit: number;
   pages: number;
+  limit: number;
 }
 
-export interface SocialFilterParams {
+export async function fetchSocialCandidates(params: {
   brand_id?: string;
   severity?: string;
   status?: string;
@@ -72,11 +72,7 @@ export interface SocialFilterParams {
   include_official?: boolean;
   page?: number;
   limit?: number;
-}
-
-export async function fetchSocialCandidates(
-  params: SocialFilterParams
-): Promise<CandidateListResponse> {
+}): Promise<CandidateListResponse> {
   const query = new URLSearchParams();
   if (params.brand_id) query.set('brand_id', params.brand_id);
   if (params.severity) query.set('severity', params.severity);
@@ -87,11 +83,7 @@ export async function fetchSocialCandidates(
   if (params.page) query.set('page', params.page.toString());
   if (params.limit) query.set('limit', params.limit.toString());
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/social/candidates?${query.toString()}`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch social candidates (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<CandidateListResponse>(`/api/v1/social/candidates?${query.toString()}`);
 }
 
 export async function submitManualCandidate(payload: {
@@ -102,20 +94,14 @@ export async function submitManualCandidate(payload: {
   bio?: string;
   external_links?: string[];
 }): Promise<Candidate> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/social/candidates`, {
+  return apiFetch<Candidate>('/api/v1/social/candidates', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       ...payload,
       candidate_type: 'social_profile',
       platform: 'bluesky',
     }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Submission failed (${res.status})`);
-  }
-  return res.json();
 }
 
 export async function updateCandidateInvestigationStatus(
@@ -123,36 +109,20 @@ export async function updateCandidateInvestigationStatus(
   status: 'new' | 'investigating' | 'resolved' | 'false_positive',
   notes?: string
 ): Promise<Candidate> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/social/candidates/${candidateId}/status`, {
+  return apiFetch<Candidate>(`/api/v1/social/candidates/${candidateId}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status, notes }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Status update failed (${res.status})`);
-  }
-  return res.json();
 }
 
 export async function scanSocialMedia(brandId: string) {
-  const res = await fetch(`${API_BASE_URL}/api/v1/social/brands/${brandId}/scan`, {
+  return apiFetch(`/api/v1/social/brands/${brandId}/scan`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Social scan failed (${res.status})`);
-  }
-  return res.json();
 }
 
 export async function seedSocialDemo(brandId: string) {
-  const res = await fetch(`${API_BASE_URL}/api/v1/social/brands/${brandId}/seed`, {
+  return apiFetch(`/api/v1/social/brands/${brandId}/seed`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Seeding demo failed (${res.status})`);
-  }
-  return res.json();
 }

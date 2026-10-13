@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { apiFetch } from './apiClient';
 import { Candidate, CandidateListResponse } from './socialClient';
 
 export interface AppFilterParams {
@@ -27,11 +27,7 @@ export async function fetchAppCandidates(
   if (params.page) query.set('page', params.page.toString());
   if (params.limit) query.set('limit', params.limit.toString());
 
-  const res = await fetch(`${API_BASE_URL}/api/v1/apps/candidates?${query.toString()}`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch app candidates (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<CandidateListResponse>(`/api/v1/apps/candidates?${query.toString()}`);
 }
 
 export async function submitManualAppCandidate(
@@ -47,9 +43,8 @@ export async function submitManualAppCandidate(
     external_links?: string[];
   }
 ): Promise<Candidate> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/apps/brands/${brandId}/manual`, {
+  return apiFetch<Candidate>(`/api/v1/apps/brands/${brandId}/manual`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       brand_id: brandId,
       store: payload.store || 'apple_app_store',
@@ -62,11 +57,6 @@ export async function submitManualAppCandidate(
       external_links: payload.external_links || [],
     }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `App submission failed (${res.status})`);
-  }
-  return res.json();
 }
 
 export async function updateAppInvestigationStatus(
@@ -74,36 +64,20 @@ export async function updateAppInvestigationStatus(
   status: 'new' | 'investigating' | 'resolved' | 'false_positive',
   notes?: string
 ): Promise<Candidate> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/apps/candidates/${candidateId}/status`, {
+  return apiFetch<Candidate>(`/api/v1/apps/candidates/${candidateId}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status, notes }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Status update failed (${res.status})`);
-  }
-  return res.json();
 }
 
 export async function scanAppStore(brandId: string) {
-  const res = await fetch(`${API_BASE_URL}/api/v1/apps/brands/${brandId}/scan`, {
+  return apiFetch(`/api/v1/apps/brands/${brandId}/scan`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `App store scan failed (${res.status})`);
-  }
-  return res.json();
 }
 
 export async function seedAppDemo(brandId: string) {
-  const res = await fetch(`${API_BASE_URL}/api/v1/apps/brands/${brandId}/seed`, {
+  return apiFetch(`/api/v1/apps/brands/${brandId}/seed`, {
     method: 'POST',
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Seeding app demo failed (${res.status})`);
-  }
-  return res.json();
 }

@@ -76,7 +76,10 @@ pip install -r requirements.txt
 
 # Configure environment variables
 cp .env.example .env
-# Edit .env with your MONGODB_URI and database names
+# Edit .env with your MONGODB_URI, database names, and JWT_SECRET_KEY
+
+# Bootstrap initial administrator account (runs once against configured MongoDB):
+python -m app.cli.bootstrap_admin --email admin@brandshield.ai --password "YourStrongPassword123!"
 ```
 
 Run test suite (runs against isolated `brandshield_test`):
@@ -122,6 +125,9 @@ npm run build
 | `MONGODB_URI` | MongoDB Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true&w=majority` |
 | `DATABASE_NAME` | Active application database | `brandshield_dev` |
 | `TEST_DATABASE_NAME` | Isolated database for test runs | `brandshield_test` |
+| `JWT_SECRET_KEY` | Cryptographic secret for signing JWT tokens | `random-32-byte-hex-string-for-prod` |
+| `JWT_ALGORITHM` | JWT signing algorithm | `HS256` |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifespan in minutes | `60` |
 | `FRONTEND_ORIGINS` | Allowed CORS origins (comma-separated) | `http://localhost:5173,http://localhost:3000` |
 | `ENVIRONMENT` | Runtime environment | `development` / `production` |
 | `PORT` | API server port | `8000` |

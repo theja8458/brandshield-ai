@@ -15,8 +15,11 @@ import {
   Menu,
   X,
   RefreshCw,
+  LogOut,
+  User as UserIcon,
 } from 'lucide-react';
 import { checkApiHealth, HealthStatus, API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -29,6 +32,7 @@ const navItems = [
 ];
 
 export const Layout: React.FC = () => {
+  const { user, logout } = useAuth();
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isChecking, setIsChecking] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
@@ -58,15 +62,13 @@ export const Layout: React.FC = () => {
             <Shield className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="font-bold text-white tracking-tight flex items-center gap-1.5">
-              BrandShield <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">AI</span>
-            </div>
-            <div className="text-[10px] text-slate-400 font-medium">Digital Risk Protection</div>
+            <span className="font-bold text-sm tracking-wide text-white">BrandShield AI</span>
+            <span className="block text-[10px] text-indigo-400 font-medium">Digital Risk Protection</span>
           </div>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="flex-1 space-y-1 p-3">
+        {/* Navigation Items */}
+        <nav className="flex-1 space-y-1 px-3 py-4">
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -75,9 +77,9 @@ export const Layout: React.FC = () => {
                 to={item.path}
                 end={item.path === '/'}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                  `flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs font-medium transition-all ${
                     isActive
-                      ? 'bg-indigo-600/15 text-indigo-300 border border-indigo-500/30 font-semibold'
+                      ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
                       : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
                   }`
                 }
@@ -89,14 +91,44 @@ export const Layout: React.FC = () => {
           })}
         </nav>
 
-        {/* System & Telemetry Footer */}
-        <div className="border-t border-slate-800/80 p-3.5 bg-slate-950/40 text-xs">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="font-semibold uppercase tracking-wider text-[10px]">Backend Health</span>
+        {/* User Card & Logout in Sidebar Footer */}
+        {user && (
+          <div className="border-t border-slate-800/80 p-3 mx-2 my-2 rounded-xl bg-slate-900/50 border border-slate-800/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <div className="h-7 w-7 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 shrink-0">
+                  <UserIcon className="h-3.5 w-3.5" />
+                </div>
+                <div className="overflow-hidden">
+                  <p className="text-xs font-medium text-slate-200 truncate">{user.email}</p>
+                  <span className={`inline-block text-[9px] uppercase tracking-wider font-semibold px-1 rounded ${
+                    user.role === 'admin'
+                      ? 'bg-purple-500/20 text-purple-300'
+                      : 'bg-indigo-500/20 text-indigo-300'
+                  }`}>
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => logout()}
+                title="Sign Out"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Backend & DB Health Telemetry */}
+        <div className="border-t border-slate-800/80 p-4 text-xs bg-slate-950/40">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-semibold text-slate-400 text-[11px] uppercase tracking-wider">Telemetry</span>
             <button
               onClick={refreshHealth}
               disabled={isChecking}
-              title="Refresh Health"
+              title="Refresh health status"
               className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
             >
               <RefreshCw className={`h-3 w-3 ${isChecking ? 'animate-spin text-indigo-400' : ''}`} />
@@ -157,6 +189,30 @@ export const Layout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 text-xs">
+            {/* User details in top header */}
+            {user && (
+              <div className="hidden sm:flex items-center gap-2 bg-slate-900/60 border border-slate-800 px-3 py-1 rounded-lg">
+                <UserIcon className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="text-slate-300 font-medium">{user.email}</span>
+                <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded ${
+                  user.role === 'admin'
+                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                    : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                }`}>
+                  {user.role}
+                </span>
+              </div>
+            )}
+
+            <button
+              onClick={() => logout()}
+              title="Sign Out"
+              className="inline-flex items-center gap-1.5 text-slate-400 hover:text-rose-300 hover:bg-rose-500/10 px-2.5 py-1 rounded border border-slate-700/60 transition-colors"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sign Out</span>
+            </button>
+
             <a
               href={`${API_BASE_URL}/health`}
               target="_blank"
@@ -171,7 +227,25 @@ export const Layout: React.FC = () => {
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-b border-slate-800 bg-slate-900 px-4 py-3 space-y-1">
+          <div className="md:hidden border-b border-slate-800 bg-slate-900 px-4 py-3 space-y-2">
+            {user && (
+              <div className="p-2 mb-2 rounded bg-slate-800/50 border border-slate-700/50 flex items-center justify-between text-xs">
+                <div>
+                  <p className="font-semibold text-slate-200">{user.email}</p>
+                  <span className="text-[10px] text-indigo-400 uppercase font-semibold">{user.role}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="text-xs text-rose-300 flex items-center gap-1"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
             {navItems.map((item) => {
               const Icon = item.icon;
               return (

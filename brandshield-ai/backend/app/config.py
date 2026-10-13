@@ -37,6 +37,19 @@ class Settings(BaseSettings):
         default=8000,
         description="HTTP server port.",
     )
+    JWT_SECRET_KEY: str = Field(
+        default="brandshield-dev-jwt-secret-key-do-not-use-in-prod-32bytes",
+        description="Cryptographic secret key for signing JWT tokens.",
+        repr=False,
+    )
+    JWT_ALGORITHM: str = Field(
+        default="HS256",
+        description="JWT signing algorithm.",
+    )
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=60,
+        description="Access token lifespan in minutes.",
+    )
 
     @model_validator(mode="after")
     def validate_test_database_distinct(self) -> "Settings":

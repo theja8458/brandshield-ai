@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../config';
+import { apiFetch } from './apiClient';
 import { Candidate } from './socialClient';
 
 export interface MetricDefinition {
@@ -57,10 +57,5 @@ export interface DashboardMetrics {
 }
 
 export async function fetchDashboardMetrics(): Promise<DashboardMetrics> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/dashboard/metrics`);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.detail || `Failed to fetch dashboard metrics (${res.status})`);
-  }
-  return res.json();
+  return apiFetch<DashboardMetrics>('/api/v1/dashboard/metrics');
 }
